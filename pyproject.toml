@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bq2579x"
+authors = [
+  {name = "Jonas Höchst", email = "hoechst@trackit.systems"}
+]
+dynamic = ["version"]
+description = "Driver and CLI for the TI BQ25790, BQ25792 and BQ25798 battery chargers, over I2C or a TPS25751 PD controller"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+    "smbus2>=0.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+]
+
+[project.urls]
+Repository = "https://github.com/trackIT-Systems/bq2579x"
+
+[project.scripts]
+bq2579x = "bq2579x.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "bq2579x.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+
+[tool.coverage.run]
+source = ["bq2579x"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
