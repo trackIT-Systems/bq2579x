@@ -14,7 +14,6 @@ from .bus import BusError, SMBusDevice
 from .device import ADDRESS, BQ2579x, Measurements, open
 from .enums import WatchdogTimeout
 from .fields import WATCHDOG, Field, Number
-from .tps25751 import TPS25751, TPS25751I2CcDevice
 
 UNIT_SCALE = {"m": 1e-3, "": 1.0}
 _QUANTITY = re.compile(r"^\s*([-+]?(?:\d+\.?\d*|\.\d+))\s*(m?)(V|A|S|°C|C|%)?\s*$", re.IGNORECASE)
@@ -82,9 +81,13 @@ def connect(args) -> tuple[BQ2579x, str]:
             if args.tps is None:
                 raise
             print(f"bq2579x: direct access failed ({e}), using the TPS25751", file=sys.stderr)
+    try:
+        import tps25751
+    except ImportError:
+        raise SystemExit("bq2579x: --tps needs the tps25751 package: pip install 'bq2579x[tps]'") from None
     tps_bus, tps_addr = args.tps
-    tps = TPS25751(bus_arg(tps_bus), tps_addr)
-    dev = TPS25751I2CcDevice(tps, args.address)
+    tps = tps25751.TPS25751(bus_arg(tps_bus), tps_addr)
+    dev = tps25751.I2CcDevice(tps, args.address)
     return open(dev, args.part), f"TPS25751 0x{tps_addr:02X} on I2C bus {tps_bus}, I2Cc address 0x{args.address:02X}"
 
 
@@ -103,8 +106,9 @@ def cmd_info(args, charger: BQ2579x, transport: str) -> None:
         "revision": charger.device_revision,
         "transport": transport,
     }
-    if isinstance(charger.device, TPS25751I2CcDevice):
-        data["tps_mode"] = charger.device.tps.mode()
+    tps = getattr(charger.device, "tps", None)
+    if tps is not None:
+        data["tps_mode"] = tps.mode()
     data["watchdog_timeout"] = charger.watchdog_timeout
     emit(args, data)
 

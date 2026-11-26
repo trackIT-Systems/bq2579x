@@ -18,7 +18,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+tps = [
+    "tps25751 @ git+https://github.com/trackIT-Systems/tps25751",
+]
 dev = [
+    "bq2579x[tps]",
     "pytest>=8",
     "pytest-cov",
 ]

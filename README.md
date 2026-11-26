@@ -20,9 +20,10 @@ All three share one register map. `bq2579x.open()` reads the part number and ret
 
 ```bash
 pip install git+https://github.com/trackIT-Systems/bq2579x
+pip install "bq2579x[tps] @ git+https://github.com/trackIT-Systems/bq2579x"  # with access through a TPS25751
 ```
 
-Python 3.12+, Linux with `/dev/i2c-*` (the only dependency is [smbus2](https://pypi.org/project/smbus2/)).
+Python 3.12+, Linux with `/dev/i2c-*` (the only dependency is [smbus2](https://pypi.org/project/smbus2/)). The `tps` extra adds [tps25751](https://github.com/trackIT-Systems/tps25751) for access through a TPS25751 USB PD controller.
 
 ## Library
 
@@ -50,13 +51,17 @@ if bq2579x.Fault.VBAT_OVP in st.faults:
 
 ### Through a TPS25751
 
+This needs the [tps25751](https://github.com/trackIT-Systems/tps25751) package (`bq2579x[tps]`).
+
 ```python
-tps = bq2579x.TPS25751(1, address=0x20)
-charger = bq2579x.open(bq2579x.TPS25751I2CcDevice(tps, bq2579x.ADDRESS))
+import tps25751
+
+tps = tps25751.TPS25751(1, address=0x20)
+charger = bq2579x.open(tps25751.I2CcDevice(tps, bq2579x.ADDRESS))
 print(tps.mode())  # 'APP ' when the PD controller runs its configuration
 ```
 
-The PD controller runs single I2C transactions on its controller port with the 4CC tasks `I2Cr` (up to 64 bytes) and `I2Cw` (up to 11 bytes); longer transfers are split. `I2Cw` only queues the write behind the controller's own charger transactions, so the driver reads every written field back and raises `WriteVerifyError` if it does not arrive (`verify=` on `open()` overrides this). The `tps25751` module does not depend on the charger driver.
+The PD controller runs single I2C transactions on its controller port with the 4CC tasks `I2Cr` (up to 64 bytes) and `I2Cw` (up to 11 bytes); longer transfers are split. `I2Cw` only queues the write behind the controller's own charger transactions (`queued_writes`), so the driver reads every written field back and raises `WriteVerifyError` if it does not arrive (`verify=` on `open()` overrides this).
 
 ### Watchdog
 
@@ -80,7 +85,7 @@ bq2579x [--bus N] [--tps BUS[:ADDR]] [--address 0x6B] [--part P] [--json] COMMAN
 | `watchdog [off\|0.5\|1\|2\|20\|40\|80\|160\|kick]` | show or set the timeout, or reset the timer |
 | `reset --yes` | reset all registers to their defaults |
 
-`--bus` talks to the charger directly, `--tps` through a TPS25751 (address 0x20 unless given). With both, the direct path is tried first and the TPS25751 is used when the charger does not answer.
+`--bus` talks to the charger directly, `--tps` through a TPS25751 (address 0x20 unless given; needs `bq2579x[tps]`). With both, the direct path is tried first and the TPS25751 is used when the charger does not answer.
 
 ```bash
 bq2579x --bus 2 --tps 1 status
@@ -95,7 +100,7 @@ pip install -e ".[dev]"
 pytest --cov
 ```
 
-The tests run against simulated hardware (`tests/fakes.py`): a charger register file and an smbus2 bus with a TPS25751 host interface.
+The tests run against simulated hardware (`tests/fakes.py`): a charger register file and an smbus2 bus with a TPS25751 host interface. The tests of the TPS25751 path are skipped when `tps25751` is not installed.
 
 ## Credits
 

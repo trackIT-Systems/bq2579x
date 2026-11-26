@@ -15,7 +15,6 @@ from .device import (
 )
 from .enums import *  # noqa: F403
 from .flags import Event, Fault, Status
-from .tps25751 import TPS25751, TaskError, TPS25751I2CcDevice
 
 __version__ = "0.1.0"
 
@@ -33,9 +32,6 @@ __all__ = [
     "Measurements",
     "SMBusDevice",
     "Status",
-    "TPS25751",
-    "TPS25751I2CcDevice",
-    "TaskError",
     "UnknownPartError",
     "WriteVerifyError",
     "open",

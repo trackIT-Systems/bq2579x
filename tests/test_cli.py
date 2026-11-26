@@ -1,3 +1,4 @@
+import importlib.util
 import json
 
 import pytest
@@ -16,6 +17,9 @@ def hw(monkeypatch):
 
     monkeypatch.setattr(smbus2, "SMBus", lambda n: buses[n])
     return chip, tps
+
+
+needs_tps = pytest.mark.skipif(importlib.util.find_spec("tps25751") is None, reason="tps25751 not installed")
 
 
 def run(capsys, *argv):
@@ -49,6 +53,7 @@ def test_info_direct(hw, capsys):
     assert "BQ25798" in out and "I2C bus 2" in out
 
 
+@needs_tps
 def test_info_tps_json(hw, capsys):
     code, out, _ = run(capsys, "--tps", "1", "--json", "info")
     data = json.loads(out)
@@ -57,6 +62,7 @@ def test_info_tps_json(hw, capsys):
     assert data["watchdog_timeout"] == "S_40"
 
 
+@needs_tps
 def test_auto_fallback(hw, capsys):
     code, out, err = run(capsys, "--bus", "3", "--tps", "1", "info")
     assert code == 0
@@ -92,6 +98,14 @@ def test_adc(hw, capsys):
     assert "battery_voltage" in out and "13.1 V" in out
 
 
+def test_tps_package_missing(hw, capsys, monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "tps25751", None)
+    with pytest.raises(SystemExit, match=r"bq2579x\[tps\]"):
+        cli.main(["--tps", "1", "info"])
+
+
 def test_get_set(hw, capsys):
     chip, _ = hw
     code, out, err = run(capsys, "--bus", "2", "set", "charge_current", "2A")
@@ -101,8 +115,13 @@ def test_get_set(hw, capsys):
     assert err == ""
     code, out, _ = run(capsys, "--bus", "2", "get", "charge_voltage", "cell_count")
     assert "14.4 V" in out and "S1" in out
+
+
+@needs_tps
+def test_set_through_tps(hw, capsys):
+    chip, _ = hw
     code, out, _ = run(capsys, "--tps", "1", "set", "watchdog_timeout", "off")
-    assert "OFF" in out
+    assert "OFF" in out and chip.regs[0x10] & 7 == 0
 
 
 def test_set_errors(hw, capsys):
